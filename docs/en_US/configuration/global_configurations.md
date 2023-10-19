@@ -14,12 +14,32 @@ basic:
   consoleLog: false
   # true|false, if it's set to true, then the log will be print to log file
   fileLog: true
+  # syslog settings
+  syslog:
+    # true|false, if it's set to true, then the log will be print to syslog
+    enable: false
+    # The syslog protocol, tcp or udp; Leave empty if no remote syslog server is used
+    network: udp
+    # The syslog server address; Leave empty if no remote syslog server is used
+    address: localhost:514
+    # The syslog level, supports debug, info, warn, error
+    level: info
+    # The syslog tag; Leave empty if no tag is used
+    tag: kuiper
   # How many hours to split the file
   rotateTime: 24
   # Maximum file storage hours
   maxAge: 72
   # Whether to ignore case in SQL processing. Note that, the name of customized function by plugins are case-sensitive.
   ignoreCase: false
+  sql:
+    # maxConnections indicates the max connections for the certain database instance group by driver and dsn sharing between the sources/sinks
+    # 0 indicates unlimited
+    maxConnections: 0
+  # rulePatrolInterval indicates the patrol interval for the internal checker to reconcile the scheudle rule
+  rulePatrolInterval: 10s
+  # cfgStorageType indicates the storage type to store the config, support `file` and `kv`. When `cfgStorageType` is file, it will save configuration into File. When `cfgStorageType` is `kv`, it will save configuration into the storage defined in `store`
+  cfgStorageType: file
 ```
 
 for debug option in basic following env is valid `KUIPER__BASIC__DEBUG=true` and if used debug value will be set to true.
@@ -42,9 +62,28 @@ basic:
   maxAge: 72
 ```
 
-## system log
+## System log
 
-When the user sets the value of the environment variable named KuiperSyslogKey to true, the log will be printed to the syslog.
+When the user sets the value of the environment variable named KuiperSyslogKey to true or set syslog enable to true, the
+log will be printed to the syslog. Additional syslog settings are as follows:
+
+```yaml
+# syslog settings
+syslog:
+  # true|false, if it's set to true, then the log will be print to syslog
+  enable: false
+  # The syslog protocol, tcp or udp; Leave empty if no remote syslog server is used
+  network: udp
+  # The syslog server address; Leave empty if no remote syslog server is used
+  address: localhost:514
+  # The syslog level, supports debug, info, warn, error
+  level: info
+  # The syslog tag; Leave empty if no tag is used
+  tag: kuiper
+```
+
+All the above settings are optional. If the network and address are not set, the local syslog will be used. If the level
+is not set, the default value is info. If the tag is not set, there will be no tag used.
 
 ## Timezone
 
@@ -172,6 +211,15 @@ Configure the default properties of sink, currently mainly used to configure [ca
 ```
 
 ## Store configurations
+
+### Configuration Storage
+
+```yaml
+basic:
+  cfgStorageType: kv
+```
+
+When `basic.cfgStorageType` is kv, the underlying storage used by it will become `store.type`, and the contents of configurations will be stored in the specified storage in the form of key-value pairs.
 
 There is possibility to configure storage of state for application. Default storage layer is sqlite database. There is option to set redis as storage.
 In order to use redis as store type property must be changed into redis value.

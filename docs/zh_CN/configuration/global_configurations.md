@@ -10,12 +10,32 @@ basic:
   consoleLog: false
   # true|false, if it's set to true, then the log will be print to log file
   fileLog: true
+  # syslog settings
+  syslog:
+    # true|false, if it's set to true, then the log will be print to syslog
+    enable: false
+    # The syslog protocol, tcp or udp; Leave empty if no remote syslog server is used
+    network: udp
+    # The syslog server address; Leave empty if no remote syslog server is used
+    address: localhost:514
+    # The syslog level, supports debug, info, warn, error
+    level: info
+    # The syslog tag; Leave empty if no tag is used
+    tag: kuiper
   # How many hours to split the file
   rotateTime: 24
   # Maximum file storage hours
   maxAge: 72
   # Whether to ignore case in SQL processing. Note that, the name of customized function by plugins are case-sensitive.
   ignoreCase: true
+  sql:
+    # maxConnections indicates the max connections for the certain database instance group by driver and dsn sharing between the sources/sinks
+    # 0 indicates unlimited
+    maxConnections: 0
+  # rulePatrolInterval indicates the patrol interval for the internal checker to reconcile the scheudle rule
+  rulePatrolInterval: 10s
+  # cfgStorageType indicates the storage type to store the config, support `file` and `kv`. When `cfgStorageType` is file, it will save configuration into File. When `cfgStorageType` is `kv`, it will save configuration into the storage defined in `store`
+  cfgStorageType: file
 ```
 
 将basic项目下debug的值设置为true是有效的 `KUIPER__BASIC__DEBUG=true`。
@@ -42,7 +62,25 @@ basic:
 
 ## 系统日志
 
-用户将名为 KuiperSyslogKey 的环境变量的值设置为 true 时，日志将打印到系统日志中。
+用户将名为 KuiperSyslogKey 的环境变量的值设置为 true 或者 syslog enable 配置为 true 时，日志将打印到系统日志中。更多
+syslog 配置选项如下所示：
+
+```yaml
+# syslog settings
+syslog:
+  # true|false, if it's set to true, then the log will be print to syslog
+  enable: false
+  # The syslog protocol, tcp or udp; Leave empty if no remote syslog server is used
+  network: udp
+  # The syslog server address; Leave empty if no remote syslog server is used
+  address: localhost:514
+  # The syslog level, supports debug, info, warn, error
+  level: info
+  # The syslog tag; Leave empty if no tag is used
+  tag: kuiper
+```
+
+以上选项均为可选。若未设置网络和地址，则使用本地 syslog。若未设置级别，则默认值为 info。若未设置标签，则不使用标签。
 
 ## 时区配置
 
@@ -171,6 +209,15 @@ GET http://localhost:9081/plugins/functions/prebuild
 ## 存储配置
 
 可通过配置修改创建的流和规则等状态的存储方式。默认情况下，程序状态存储在 sqlite 数据库中。把存储类型改成 redis，可使用 redis 作为存储方式。
+
+### 配置存储
+
+```yaml
+basic:
+  cfgStorageType: kv
+```
+
+当 basic.cfgStorageType 为 kv 时，他所用的底层存储将会变为 store.type，而 configurations 的文件内容将会以键值对的形式存储在所指定的存储中。
 
 ### Sqlite
 

@@ -1,4 +1,4 @@
-// Copyright 2022 EMQ Technologies Co., Ltd.
+// Copyright 2022-2023 EMQ Technologies Co., Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package meta
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -56,6 +57,7 @@ const (
 	SinkCfgOperatorKeyPrefix         = "sinks."
 	ConnectionCfgOperatorKeyTemplate = "connections.%s"
 	ConnectionCfgOperatorKeyPrefix   = "connections."
+	PASSWORD                         = "******"
 )
 
 // loadConfigOperatorForSource
@@ -64,7 +66,7 @@ const (
 func loadConfigOperatorForSource(pluginName string) {
 	yamlKey := fmt.Sprintf(SourceCfgOperatorKeyTemplate, pluginName)
 
-	if cfg, _ := conf.NewConfigOperatorFromSourceYaml(pluginName); cfg != nil {
+	if cfg, _ := conf.NewConfigOperatorFromSourceStorage(pluginName); cfg != nil {
 		ConfigManager.lock.Lock()
 		ConfigManager.cfgOperators[yamlKey] = cfg
 		ConfigManager.lock.Unlock()
@@ -78,7 +80,7 @@ func loadConfigOperatorForSource(pluginName string) {
 func loadConfigOperatorForSink(pluginName string) {
 	yamlKey := fmt.Sprintf(SinkCfgOperatorKeyTemplate, pluginName)
 
-	if cfg, _ := conf.NewConfigOperatorFromSinkYaml(pluginName); cfg != nil {
+	if cfg, _ := conf.NewConfigOperatorFromSinkStorage(pluginName); cfg != nil {
 		ConfigManager.lock.Lock()
 		ConfigManager.cfgOperators[yamlKey] = cfg
 		ConfigManager.lock.Unlock()
@@ -92,7 +94,7 @@ func loadConfigOperatorForSink(pluginName string) {
 func loadConfigOperatorForConnection(pluginName string) {
 	yamlKey := fmt.Sprintf(ConnectionCfgOperatorKeyTemplate, pluginName)
 
-	if cfg, _ := conf.NewConfigOperatorFromConnectionYaml(pluginName); cfg != nil {
+	if cfg, _ := conf.NewConfigOperatorFromConnectionStorage(pluginName); cfg != nil {
 		ConfigManager.lock.Lock()
 		ConfigManager.cfgOperators[yamlKey] = cfg
 		ConfigManager.lock.Unlock()
@@ -111,7 +113,7 @@ func delConfKey(configOperatorKey, confKey, language string) error {
 
 	cfgOps.DeleteConfKey(confKey)
 
-	err := cfgOps.SaveCfgToFile()
+	err := cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s%s.%v`, getMsg(language, source, "write_data_fail"), configOperatorKey, err)
 	}
@@ -153,11 +155,40 @@ func GetYamlConf(configOperatorKey, language string) (b []byte, err error) {
 	}
 
 	cf := cfgOps.CopyConfContent()
+	for key, kvs := range cf {
+		cf[key] = hiddenPassword(kvs)
+	}
 	if b, err = json.Marshal(cf); nil != err {
 		return nil, fmt.Errorf(`%s%v`, getMsg(language, source, "json_marshal_fail"), cf)
 	} else {
 		return b, err
 	}
+}
+
+func hiddenPassword(kvs map[string]interface{}) map[string]interface{} {
+	for k, v := range kvs {
+		if m, ok := v.(map[string]interface{}); ok {
+			kvs[k] = hiddenPassword(m)
+		}
+		if strings.ToLower(k) == "password" {
+			kvs[k] = PASSWORD
+		}
+		if strings.ToLower(k) == "url" {
+			if _, ok := v.(string); !ok {
+				continue
+			}
+			u, err := url.Parse(v.(string))
+			if err != nil || u.User == nil {
+				continue
+			}
+			password, _ := u.User.Password()
+			if password != "" {
+				u.User = url.UserPassword(u.User.Username(), PASSWORD)
+				kvs[k] = u.String()
+			}
+		}
+	}
+	return kvs
 }
 
 func addSourceConfKeys(plgName string, configurations YamlConfigurations) (err error) {
@@ -177,7 +208,7 @@ func addSourceConfKeys(plgName string, configurations YamlConfigurations) (err e
 
 	cfgOps.LoadConfContent(configurations)
 
-	err = cfgOps.SaveCfgToFile()
+	err = cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s.%v`, configOperatorKey, err)
 	}
@@ -209,7 +240,7 @@ func AddSourceConfKey(plgName, confKey, language string, content []byte) error {
 		return err
 	}
 
-	err = cfgOps.SaveCfgToFile()
+	err = cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s%s.%v`, getMsg(language, source, "write_data_fail"), configOperatorKey, err)
 	}
@@ -241,7 +272,7 @@ func AddSinkConfKey(plgName, confKey, language string, content []byte) error {
 		return err
 	}
 
-	err = cfgOps.SaveCfgToFile()
+	err = cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s%s.%v`, getMsg(language, sink, "write_data_fail"), configOperatorKey, err)
 	}
@@ -265,7 +296,7 @@ func addSinkConfKeys(plgName string, cf YamlConfigurations) error {
 
 	cfgOps.LoadConfContent(cf)
 
-	err := cfgOps.SaveCfgToFile()
+	err := cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s.%v`, configOperatorKey, err)
 	}
@@ -297,7 +328,7 @@ func AddConnectionConfKey(plgName, confKey, language string, content []byte) err
 		return err
 	}
 
-	err = cfgOps.SaveCfgToFile()
+	err = cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s%s.%v`, getMsg(language, source, "write_data_fail"), configOperatorKey, err)
 	}
@@ -321,7 +352,7 @@ func addConnectionConfKeys(plgName string, cf YamlConfigurations) error {
 
 	cfgOps.LoadConfContent(cf)
 
-	err := cfgOps.SaveCfgToFile()
+	err := cfgOps.SaveCfgToStorage()
 	if err != nil {
 		return fmt.Errorf(`%s.%v`, configOperatorKey, err)
 	}
@@ -381,7 +412,7 @@ func ResetConfigs() {
 
 	for _, ops := range ConfigManager.cfgOperators {
 		ops.ClearConfKeys()
-		_ = ops.SaveCfgToFile()
+		_ = ops.SaveCfgToStorage()
 	}
 }
 

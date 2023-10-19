@@ -202,6 +202,10 @@
                 {
                   "title": "Redis 数据源",
                   "path": "guide/sources/builtin/redis"
+                },
+                {
+                  "title": "RedisSub 数据源",
+                  "path": "guide/sources/builtin/redisSub"
                 }
               ]
             },
@@ -258,6 +262,10 @@
                 {
                   "title": "Redis Sink",
                   "path": "guide/sinks/builtin/redis"
+                },
+                {
+                  "title": "RedisPub Sink",
+                  "path": "guide/sinks/builtin/redisPub"
                 },
                 {
                   "title": "File Sink",
@@ -469,6 +477,10 @@
         {
           "title": "数据导入导出",
           "path": "api/restapi/data"
+        },
+        {
+            "title": "动态重载配置",
+            "path": "api/restapi/configs"
         }
       ]
     },
@@ -879,6 +891,10 @@
                 {
                   "title": "Redis Source",
                   "path": "guide/sources/builtin/redis"
+                },
+                {
+                  "title": "RedisSub Source",
+                  "path": "guide/sources/builtin/redisSub"
                 }
               ]
             },
@@ -935,6 +951,10 @@
                 {
                   "title": "Redis Sink",
                   "path": "guide/sinks/builtin/redis"
+                },
+                {
+                  "title": "RedisPub Sink",
+                  "path": "guide/sinks/builtin/redisPub"
                 },
                 {
                   "title": "File Sink",
@@ -1143,6 +1163,10 @@
         {
           "title": "Data Export/Import",
           "path": "api/restapi/data"
+        },
+        {
+          "title": "Dynamic Reload Configs",
+          "path": "api/restapi/configs"
         }
       ]
     },
